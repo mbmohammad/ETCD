@@ -1,0 +1,59 @@
+services:
+  etcd:
+    image: 'bitnami/etcd:latest'
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+    ports:
+      - '2379:2379'
+    networks:
+      - temp
+
+  controller:
+    build:
+      context: .
+      dockerfile: ./cmd/controller/Dockerfile
+    ports:
+      - "8080"
+    networks:
+      - temp
+    environment:
+      - ETCD_ENDPOINTS=http://etcd:2379
+    depends_on:
+      - etcd
+
+  loadbalancer:
+    container_name: loadbalancer
+    build:
+      context: .
+      dockerfile: ./cmd/loadbalancer/Dockerfile
+    ports:
+      - "9001:9001"
+    networks:
+      - temp
+    environment:
+      - ETCD_ENDPOINTS=http://etcd:2379
+    depends_on:
+      - etcd
+
+  node:
+    image: ct_hw3-node:latest
+    build:
+      context: .
+      dockerfile: ./cmd/node/Dockerfile
+    profiles:
+      - build_only
+    environment:
+      - ETCD_ENDPOINTS=http://etcd:2379
+  
+  client:
+    image: ct_hw3-client:latest
+    build:
+      context: .
+      dockerfile: ./cmd/client/Dockerfile
+    profiles:
+      - build_only
+
+networks:
+  temp:
+    driver: bridge
